@@ -36,27 +36,32 @@ let
 in
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "pdfcraft";
-  version = "0.14.0";
+  version = "0.16.1";
 
   src = fetchFromGitHub {
     owner = "storytold";
     repo = "pdfcraft";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-UCTQr6j4TqPXQWH410cF6DZC0vK59QFv1FAWzxdDjwA=";
+    hash = "sha256-/OIb4TcNQ92z2PO7kPJxHkPny6kXYz8kjVT+JDzYnMo=";
   };
 
-  cargoHash = "sha256-L0fC96fLlwTq0Gu0CSL9swKzZe4lcgLFsMsaIk3CxuY=";
+  cargoHash = "sha256-3fRYRG00cvmGrveRLhu+e+e0F3LoWUJNPwEu380HqXE=";
 
-  # rten-gemm uses AVX512-VNNI intrinsics that fail to compile with nixpkgs rustc.
-  postPatch = lib.optionalString stdenv.hostPlatform.isx86_64 ''
-        substituteInPlace "$cargoDepsCopy"/source-registry-0/rten-gemm-*/src/i8dot.rs \
-          --replace-fail \
-          '            if let Some(isa) = x86_64::Avx512VnniIsa::new() {
-                    return unsafe { dispatch_avx512_vnni(isa, self) };
-                }
-    ' \
-          ""
-  '';
+  postPatch =
+    # remove unused patch lines from Cargo.toml, otherwise building will fail
+    ''
+      sed -i -E '/^(egui_demo_lib|egui_inspection|egui_system_font_provider) = /d' Cargo.toml
+    ''
+    # rten-gemm uses AVX512-VNNI intrinsics that fail to compile with nixpkgs rustc.
+    + lib.optionalString stdenv.hostPlatform.isx86_64 ''
+          substituteInPlace "$cargoDepsCopy"/source-registry-0/rten-gemm-*/src/i8dot.rs \
+            --replace-fail \
+            '            if let Some(isa) = x86_64::Avx512VnniIsa::new() {
+                      return unsafe { dispatch_avx512_vnni(isa, self) };
+                  }
+      ' \
+            ""
+    '';
 
   __structuredAttrs = true;
   strictDeps = true;
